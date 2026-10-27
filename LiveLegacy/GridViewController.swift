@@ -254,7 +254,7 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
             self?.tagFilter = t
             self?.variantsChanged()
         }
-        PopoverController(content: content, size: FilterView.size).present(from: self, source: filterButton, arrows: .up)
+        PopoverController(content: content, size: FilterView.size).present(from: self, source: filterButton, arrows: isPhone ? .down : .up)
     }
 
     @objc private func showSort() {
@@ -270,7 +270,7 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
         arrow.font = .boldSystemFont(ofSize: 17)
         b.addSubview(arrow)
         b.addTarget(self, action: #selector(sortTapped), for: .touchUpInside)
-        PopoverController(content: b, size: CGSize(width: 210, height: 48)).present(from: self, source: sortButton, arrows: .up)
+        PopoverController(content: b, size: CGSize(width: 210, height: 48)).present(from: self, source: sortButton, arrows: isPhone ? .down : .up)
     }
 
     @objc private func sortTapped() {
