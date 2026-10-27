@@ -100,6 +100,10 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
         nc.addObserver(self, selector: #selector(triggerFollow), name: .liveTriggerFollow, object: client)
         nc.addObserver(self, selector: #selector(disconnected), name: .liveDisconnected, object: client)
         variantsChanged()
+        // Testing hook, like -autoConnect: launch with "-openFirst YES" to open the first image.
+        if UserDefaults.standard.bool(forKey: "openFirst"), let first = shown.first {
+            DispatchQueue.main.async { self.openViewer(id: first.id) }
+        }
     }
 
     override func viewDidLayoutSubviews() {
