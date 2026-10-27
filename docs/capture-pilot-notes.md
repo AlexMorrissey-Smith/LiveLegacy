@@ -25,7 +25,7 @@ All are plain HTTP on the mobile port, with `sessionID` and a `timestamp` query 
 | `connectToService` | POST with an empty body. Returns the session ID. `password` is the SHA1 hex of the password. |
 | `getServerState` | `objects` (server, camera) plus `variants` and `revision`. |
 | `getServerChanges` | Long poll with `revision`. Returns changed objects and variants. |
-| `getImage` | Base64 JPEG for a variant ID. |
+| `getImage` | Raw JPEG for a variant ID, with the same width, height and crop rectangle parameters as Live for Studio. |
 | `getImageMetadata` | `id=<variantID>`. Returns the variant's properties as JSON. |
 | `setProperty` | Rating and tag as before. Camera settings: `objectType=kObjectType_Camera&objectID=<id>&propertyID=<kCameraProperty_*>&propertyValue=<value>`. Returns `0` on success. |
 | `incrementProperty` / `decrementProperty` | Same object parameters, no value. Steps the setting one notch. Returns `0`. |
