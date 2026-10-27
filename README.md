@@ -60,7 +60,7 @@ It looks and works like the official app, so anyone who's used that won't need s
 
 ## Installing it
 
-It isn't on the App Store (see [why](#why-isnt-it-on-the-app-store)), so you sideload it. You do this once per device.
+It isn't on the App Store yet (it's [in review](#why-isnt-it-on-the-app-store)), so you sideload it. You do this once per device.
 
 1. Download `LiveLegacy-unsigned.ipa` from the [latest release](../../releases/latest).
 2. Install [Sideloadly](https://sideloadly.io) on your Mac or PC. (AltStore won't do it: current versions need
@@ -105,11 +105,10 @@ list.
 
 ## Why isn't it on the App Store?
 
-Two reasons:
-
-- Apple only accepts uploads built with the current Xcode, and the current Xcode can't build for anything older than
-  iOS 15. The whole point of this app is iOS 12, so the App Store route is out.
-- It's an unofficial client for someone else's product, which App Review generally doesn't like.
+It's in review now. Apple only accepts uploads built with the current Xcode, and that can't build for anything older
+than iOS 15, so the App Store version will only cover iOS 15 and later. It's also an unofficial client for someone
+else's product, which App Review generally doesn't like, so it may not get through. Either way, devices on iOS 12 to
+14 will still need the sideloaded build.
 
 ## Building it yourself
 
