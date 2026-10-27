@@ -26,20 +26,20 @@ xcrun -sdk $SDK swiftc -target $TARGET -sdk "$SDK_PATH" -O -swift-version 5 \
   -module-name LiveLegacy -parse-as-library LiveLegacy/*.swift -o "$APP/LiveLegacy"
 
 xcrun ibtool --compile "$APP/LaunchScreen.storyboardc" LiveLegacy/LaunchScreen.storyboard \
-  --minimum-deployment-target $MIN --target-device ipad
+  --minimum-deployment-target $MIN --target-device iphone --target-device ipad
 
 sed -e 's/$(EXECUTABLE_NAME)/LiveLegacy/; s/$(PRODUCT_NAME)/LiveLegacy/' \
     -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$BUNDLE_ID/" LiveLegacy/Info.plist > "$APP/Info.plist"
 P() { /usr/libexec/PlistBuddy -c "$1" "$APP/Info.plist"; }
 P "Add :MinimumOSVersion string $MIN"
-P "Add :UIDeviceFamily array"; P "Add :UIDeviceFamily:0 integer 2"
+P "Add :UIDeviceFamily array"; P "Add :UIDeviceFamily:0 integer 1"; P "Add :UIDeviceFamily:1 integer 2"
 P "Add :CFBundleSupportedPlatforms array"; P "Add :CFBundleSupportedPlatforms:0 string $PLATFORM"
 P "Add :DTPlatformName string $SDK"
 P "Add :UIRequiredDeviceCapabilities array"; P "Add :UIRequiredDeviceCapabilities:0 string arm64"
 # App icon: actool still accepts an iOS 12 target. It writes Assets.car, a loose 76pt fallback PNG and the
 # CFBundleIcons keys, which are merged into Info.plist below.
 xcrun actool LiveLegacy/Assets.xcassets --compile "$APP" --platform $SDK --minimum-deployment-target $MIN \
-  --target-device ipad --app-icon AppIcon --output-partial-info-plist "$OUT/icon.plist" \
+  --target-device iphone --target-device ipad --app-icon AppIcon --output-partial-info-plist "$OUT/icon.plist" \
   --output-format human-readable-text > /dev/null
 /usr/libexec/PlistBuddy -c "Merge $OUT/icon.plist" "$APP/Info.plist"
 plutil -convert binary1 "$APP/Info.plist"
@@ -59,7 +59,7 @@ if [ "$MODE" = unsigned ]; then
 fi
 
 SIGN_ID=${SIGN_ID:-"Apple Development"}
-PROFILE=${PROFILE:?Set PROFILE to a .mobileprovision that covers $BUNDLE_ID and the iPad}
+PROFILE=${PROFILE:?Set PROFILE to a .mobileprovision that covers $BUNDLE_ID and the device}
 cp "$PROFILE" "$APP/embedded.mobileprovision"
 security cms -D -i "$PROFILE" > "$OUT/profile.plist"
 TEAM=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "$OUT/profile.plist")

@@ -16,7 +16,10 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
     private let sortButton = TopBar.iconButton(Icon.sort(ascending: false), size: 32)
     private let followButton = FollowButton()
     private var collectionView: UICollectionView!
-    private var sidebarVisible = true
+    private var sidebarVisible = !isPhone
+    /// iPhone only: toolbar holding the controls that live in the top bar on iPad, and a dimmer behind the drawer.
+    private let bottomBar = BottomBar()
+    private let dimView = UIView()
 
     private(set) var shown: [Variant] = []
     private var newestFirst = true
@@ -55,9 +58,11 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
         view.addSubview(divider)
 
         let layout = LeftAlignedFlowLayout()
-        layout.minimumInteritemSpacing = 6
-        layout.minimumLineSpacing = 6
-        layout.sectionInset = UIEdgeInsets(top: 28, left: 0, bottom: 20, right: 0)
+        // iPhone gets a tight square grid; iPad keeps the original's fixed-height rows.
+        layout.minimumInteritemSpacing = isPhone ? 2 : 6
+        layout.minimumLineSpacing = isPhone ? 2 : 6
+        layout.sectionInset = isPhone ? UIEdgeInsets(top: 2, left: 0, bottom: 2, right: 0)
+                                      : UIEdgeInsets(top: 28, left: 0, bottom: 20, right: 0)
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = Theme.background
         collectionView.dataSource = self
@@ -71,11 +76,23 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
         sortButton.addTarget(self, action: #selector(showSort), for: .touchUpInside)
         followButton.pill = false
         followButton.addTarget(self, action: #selector(toggleFollow), for: .touchUpInside)
-        bar.leftViews = [backButton]
-        bar.titleCenter = 0.42
-        bar.middleViews = [(filterButton, 0.6), (sortButton, 0.83)]
-        bar.rightViews = [followButton]
         view.addSubview(bar)
+        if isPhone {
+            // Collections become a drawer over the grid; filter, sort and Follow move to a bottom toolbar.
+            backButton.setTitle("Projects", for: .normal)
+            bar.leftViews = [backButton]
+            view.addSubview(bottomBar)
+            bottomBar.items = [sidebarButton, filterButton, sortButton, followButton]
+            dimView.backgroundColor = UIColor(white: 0, alpha: 0.5)
+            dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleCollections)))
+            view.addSubview(dimView)
+            view.bringSubviewToFront(sidebar)
+        } else {
+            bar.leftViews = [backButton]
+            bar.titleCenter = 0.42
+            bar.middleViews = [(filterButton, 0.6), (sortButton, 0.83)]
+            bar.rightViews = [followButton]
+        }
 
         let nc = NotificationCenter.default
         nc.addObserver(self, selector: #selector(variantsChanged), name: .liveVariantsChanged, object: client)
@@ -87,6 +104,7 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        if isPhone { layoutPhone(); return }
         let top = view.safeAreaInsets.top
         let w = view.bounds.width, h = view.bounds.height
         let sw = sidebarVisible ? GridViewController.sidebarWidth : 0
@@ -107,6 +125,26 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
             sidebar.addSubview(sidebarButton)
         }
         collectionView.frame = CGRect(x: barX, y: bar.frame.maxY, width: w - barX, height: h - bar.frame.maxY)
+        viewer?.view.frame = contentFrame
+    }
+
+    private func layoutPhone() {
+        let w = view.bounds.width, h = view.bounds.height
+        let insets = view.safeAreaInsets
+        bar.frame = CGRect(x: 0, y: 0, width: w, height: insets.top + TopBar.height)
+        bottomBar.frame = CGRect(x: 0, y: h - insets.bottom - BottomBar.height, width: w,
+                                 height: insets.bottom + BottomBar.height)
+        collectionView.frame = CGRect(x: 0, y: bar.frame.maxY, width: w, height: bottomBar.frame.minY - bar.frame.maxY)
+        // Drawer slides in from the left over the grid.
+        let dw = min(GridViewController.sidebarWidth + insets.left, w - 50)
+        sidebar.isHidden = false
+        sidebar.frame = CGRect(x: sidebarVisible ? 0 : -dw - 1, y: 0, width: dw, height: h)
+        sidebarButton.isHidden = false
+        collectionsTable.frame = CGRect(x: insets.left, y: insets.top + 8, width: dw - insets.left,
+                                        height: h - insets.top - 8)
+        dimView.frame = view.bounds
+        dimView.alpha = sidebarVisible ? 1 : 0
+        divider.isHidden = true
         viewer?.view.frame = contentFrame
     }
 
@@ -202,6 +240,7 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
     }
 
     private var contentFrame: CGRect {
+        if isPhone { return view.bounds }
         let sw = sidebarVisible ? GridViewController.sidebarWidth : 0
         return CGRect(x: sw, y: 0, width: view.bounds.width - sw, height: view.bounds.height)
     }
@@ -260,6 +299,7 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
         closeViewer()
         client.selectCollection(c.id) { _ in }
         tableView.reloadData()
+        if isPhone { toggleCollections() }
     }
 
     // MARK: Grid
@@ -276,6 +316,13 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
 
     func collectionView(_ collectionView: UICollectionView, layout: UICollectionViewLayout,
                         sizeForItemAt indexPath: IndexPath) -> CGSize {
+        if isPhone, let flow = layout as? UICollectionViewFlowLayout {
+            // Square cells, about 120pt each: three across in portrait, more in landscape.
+            let w = collectionView.bounds.width - collectionView.safeAreaInsets.left - collectionView.safeAreaInsets.right
+            let cols = max(3, Int(w / 120))
+            let side = floor((w - flow.minimumInteritemSpacing * CGFloat(cols - 1)) / CGFloat(cols))
+            return CGSize(width: side, height: side)
+        }
         let v = shown[indexPath.item]
         let aspect = v.width > 0 && v.height > 0 ? CGFloat(v.width / v.height) : 1.5
         let h = GridViewController.thumbHeight
@@ -389,7 +436,7 @@ final class ThumbCell: UICollectionViewCell {
         imageView.image = nil
         task?.cancel()
         let scale = UIScreen.main.scale
-        let h = Int(GridViewController.thumbHeight * scale)
+        let h = Int(max(GridViewController.thumbHeight, bounds.height) * scale)
         task = client.image(v.id, width: h * 2, height: h) { [weak self] img in
             guard let self = self, self.currentID == v.id else { return }
             self.imageView.image = img

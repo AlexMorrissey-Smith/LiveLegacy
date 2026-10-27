@@ -30,13 +30,14 @@ final class TopBar: UIView {
         let top = safeAreaInsets.top
         let h = bounds.height - top
         line.frame = CGRect(x: 0, y: bounds.height - 1 / UIScreen.main.scale, width: bounds.width, height: 1 / UIScreen.main.scale)
-        var x: CGFloat = 12
+        // Side insets keep items clear of the notch on landscape iPhones.
+        var x: CGFloat = 12 + safeAreaInsets.left
         for v in leftViews {
             let s = v.sizeThatFits(CGSize(width: 400, height: h))
             v.frame = CGRect(x: x, y: top + (h - s.height) / 2, width: s.width, height: s.height)
             x += s.width + 12
         }
-        var r = bounds.width - 12
+        var r = bounds.width - 12 - safeAreaInsets.right
         for v in rightViews.reversed() {
             let s = v.sizeThatFits(CGSize(width: 400, height: h))
             r -= s.width
@@ -108,6 +109,37 @@ final class FollowButton: SizedButton {
         let s = super.sizeThatFits(CGSize(width: 300, height: 30))
         fixedSize = CGSize(width: s.width, height: 30)
         superview?.setNeedsLayout()
+    }
+}
+
+/// True on iPhone and iPod touch, which get the compact layout.
+var isPhone: Bool { UIDevice.current.userInterfaceIdiom == .phone }
+
+/// Bottom toolbar used by the compact (iPhone) layout; items are spread evenly across it.
+final class BottomBar: UIView {
+    static let height: CGFloat = 49
+    private let line = UIView()
+    var items: [UIView] = [] { didSet { oldValue.forEach { $0.removeFromSuperview() }; items.forEach(addSubview); setNeedsLayout() } }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = Theme.bar
+        line.backgroundColor = Theme.hairline
+        addSubview(line)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        line.frame = CGRect(x: 0, y: 0, width: bounds.width, height: 1 / UIScreen.main.scale)
+        let left = safeAreaInsets.left + 8, w = bounds.width - left - safeAreaInsets.right - 8
+        let slot = w / CGFloat(max(items.count, 1))
+        for (i, v) in items.enumerated() {
+            let s = v.sizeThatFits(CGSize(width: slot, height: BottomBar.height))
+            v.frame = CGRect(x: left + slot * (CGFloat(i) + 0.5) - s.width / 2, y: (BottomBar.height - s.height) / 2,
+                             width: s.width, height: s.height)
+        }
     }
 }
 

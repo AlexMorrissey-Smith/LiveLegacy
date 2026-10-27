@@ -88,13 +88,28 @@ final class ViewerViewController: UIViewController, UIScrollViewDelegate {
         let b = view.bounds
         let top = view.safeAreaInsets.top
         bar.frame = CGRect(x: 0, y: 0, width: b.width, height: top + TopBar.height)
-        let area = CGRect(x: 0, y: bar.frame.maxY, width: b.width - ViewerViewController.railWidth,
+        let area: CGRect
+        if isPhone {
+            // iPhone: stars run left to right (1 to 5) along a bottom rail, tag at the end.
+            let bottom = view.safeAreaInsets.bottom
+            area = CGRect(x: 0, y: bar.frame.maxY, width: b.width,
+                          height: b.height - bar.frame.maxY - bottom - ViewerViewController.railWidth)
+            let y = area.maxY + (ViewerViewController.railWidth - 40) / 2
+            let total: CGFloat = 5 * 44 + 24 + 40
+            let x0 = (b.width - total) / 2
+            for s in starButtons {
+                s.frame = CGRect(x: x0 + CGFloat(s.tag - 1) * 44, y: y, width: 40, height: 40)
+            }
+            tagButton.frame = CGRect(x: x0 + 5 * 44 + 24 + 3, y: y + 3, width: 34, height: 34)
+        } else {
+            area = CGRect(x: 0, y: bar.frame.maxY, width: b.width - ViewerViewController.railWidth,
                           height: b.height - bar.frame.maxY)
-        let mid = area.midY
-        for (i, s) in starButtons.enumerated() {
-            s.frame = CGRect(x: b.width - 44, y: mid - 130 + CGFloat(i) * 40, width: 36, height: 36)
+            let mid = area.midY
+            for (i, s) in starButtons.enumerated() {
+                s.frame = CGRect(x: b.width - 44, y: mid - 130 + CGFloat(i) * 40, width: 36, height: 36)
+            }
+            tagButton.frame = CGRect(x: b.width - 43, y: mid + 82, width: 34, height: 34)
         }
-        tagButton.frame = CGRect(x: b.width - 43, y: mid + 82, width: 34, height: 34)
         if scrollView.frame != area {
             scrollView.frame = area
             resetZoom()
@@ -260,9 +275,14 @@ final class ViewerViewController: UIViewController, UIScrollViewDelegate {
         let content = UIView()
         for t in 0...7 {
             let s = tagSwatch(t, size: 24)
-            s.frame.origin = CGPoint(x: 10, y: 10 + CGFloat(t) * 38)
+            s.frame.origin = isPhone ? CGPoint(x: 10 + CGFloat(t) * 38, y: 10) : CGPoint(x: 10, y: 10 + CGFloat(t) * 38)
             s.addTarget(self, action: #selector(swatchTapped(_:)), for: .touchUpInside)
             content.addSubview(s)
+        }
+        if isPhone {
+            PopoverController(content: content, size: CGSize(width: 8 * 38 + 6, height: 44))
+                .present(from: self, source: tagButton, arrows: .down)
+            return
         }
         PopoverController(content: content, size: CGSize(width: 44, height: 8 * 38 + 6))
             .present(from: self, source: tagButton, arrows: .right)
