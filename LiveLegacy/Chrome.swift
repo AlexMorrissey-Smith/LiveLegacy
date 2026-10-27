@@ -80,7 +80,7 @@ class SizedButton: UIButton {
     override var intrinsicContentSize: CGSize { fixedSize ?? super.intrinsicContentSize }
 }
 
-/// Follow button: filled blue pill when off ("Follow"), outlined pill when on ("Stop Following").
+/// Follow button: filled blue pill when off ("Follow"), outlined pill when on ("Stop").
 final class FollowButton: SizedButton {
     var following = false { didSet { update() } }
     var pill = true { didSet { update() } }
@@ -94,7 +94,8 @@ final class FollowButton: SizedButton {
     }
 
     private func update() {
-        setTitle(following ? "Stop Following" : "Follow", for: .normal)
+        let title = following ? "Stop" : "Follow"
+        setTitle(title, for: .normal)
         setTitleColor(.white, for: .normal)
         if pill {
             backgroundColor = following ? .clear : Theme.accent
@@ -106,8 +107,11 @@ final class FollowButton: SizedButton {
             layer.borderWidth = 0
             setTitleColor(following ? Theme.accent : .white, for: .normal)
         }
-        let s = super.sizeThatFits(CGSize(width: 300, height: 30))
-        fixedSize = CGSize(width: s.width, height: 30)
+        // Measure the string itself: on iOS 12 the title label still holds the old title at this point,
+        // so asking the button would size it for "Follow" and truncate "Stop".
+        let font = titleLabel?.font ?? .boldSystemFont(ofSize: 15)
+        let w = ceil((title as NSString).size(withAttributes: [.font: font]).width)
+        fixedSize = CGSize(width: w + contentEdgeInsets.left + contentEdgeInsets.right, height: 30)
         superview?.setNeedsLayout()
     }
 }
