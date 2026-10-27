@@ -15,7 +15,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 MODE=${1:-device}
-BUNDLE_ID=com.alexms.livelegacy
+BUNDLE_ID=com.morrisseymedia.livelegacy
 BUILD_NUMBER=${BUILD_NUMBER:-1}
 
 if [ "$MODE" = appstore ]; then

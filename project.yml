@@ -1,6 +1,6 @@
 name: LiveLegacy
 options:
-  bundleIdPrefix: com.alexms
+  bundleIdPrefix: com.morrisseymedia
   deploymentTarget:
     iOS: "12.0"
 targets:
@@ -11,7 +11,7 @@ targets:
     sources: [LiveLegacy]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.alexms.livelegacy
+        PRODUCT_BUNDLE_IDENTIFIER: com.morrisseymedia.livelegacy
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "5.0"
         INFOPLIST_FILE: LiveLegacy/Info.plist
