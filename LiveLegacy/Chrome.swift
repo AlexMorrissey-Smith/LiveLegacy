@@ -2,7 +2,8 @@ import UIKit
 
 /// The flat dark top bar used on every screen (the original app has no system-style navigation bar).
 final class TopBar: UIView {
-    static let height: CGFloat = 52
+    /// Divided by the UI scale so the bar keeps its normal on-screen size on iPad minis.
+    static let height: CGFloat = 52 / UI.scale
     let titleLabel = UILabel()
     /// Horizontal centre of the title as a fraction of the bar width.
     var titleCenter: CGFloat = 0.5 { didSet { setNeedsLayout() } }
@@ -30,26 +31,33 @@ final class TopBar: UIView {
         let top = safeAreaInsets.top
         let h = bounds.height - top
         line.frame = CGRect(x: 0, y: bounds.height - 1 / UIScreen.main.scale, width: bounds.width, height: 1 / UIScreen.main.scale)
-        // Side insets keep items clear of the notch on landscape iPhones.
-        var x: CGFloat = 12 + safeAreaInsets.left
-        for v in leftViews {
-            let s = v.sizeThatFits(CGSize(width: 400, height: h))
-            v.frame = CGRect(x: x, y: top + (h - s.height) / 2, width: s.width, height: s.height)
-            x += s.width + 12
+        // Items are counter-scaled so the bar looks the same on iPad minis, where the rest of the UI is enlarged.
+        let k = 1 / UI.scale
+        func place(_ v: UIView, x: CGFloat, size s: CGSize) {
+            v.transform = .identity
+            v.bounds = CGRect(origin: .zero, size: s)
+            v.center = CGPoint(x: x + s.width * k / 2, y: top + h / 2)
+            v.transform = CGAffineTransform(scaleX: k, y: k)
         }
-        var r = bounds.width - 12 - safeAreaInsets.right
+        var x: CGFloat = 12 * k + safeAreaInsets.left
+        for v in leftViews {
+            let s = v.sizeThatFits(CGSize(width: 400, height: h / k))
+            place(v, x: x, size: s)
+            x += (s.width + 12) * k
+        }
+        var r = bounds.width - 12 * k - safeAreaInsets.right
         for v in rightViews.reversed() {
-            let s = v.sizeThatFits(CGSize(width: 400, height: h))
-            r -= s.width
-            v.frame = CGRect(x: r, y: top + (h - s.height) / 2, width: s.width, height: s.height)
-            r -= 16
+            let s = v.sizeThatFits(CGSize(width: 400, height: h / k))
+            r -= s.width * k
+            place(v, x: r, size: s)
+            r -= 16 * k
         }
         for (v, fraction) in middleViews {
-            let s = v.sizeThatFits(CGSize(width: 400, height: h))
-            v.frame = CGRect(x: bounds.width * fraction - s.width / 2, y: top + (h - s.height) / 2, width: s.width, height: s.height)
+            let s = v.sizeThatFits(CGSize(width: 400, height: h / k))
+            place(v, x: bounds.width * fraction - s.width * k / 2, size: s)
         }
-        let tw = min(titleLabel.intrinsicContentSize.width, bounds.width * 0.4)
-        titleLabel.frame = CGRect(x: bounds.width * titleCenter - tw / 2, y: top, width: tw, height: h)
+        let tw = min(titleLabel.intrinsicContentSize.width, bounds.width * 0.4 / k)
+        place(titleLabel, x: bounds.width * titleCenter - tw * k / 2, size: CGSize(width: tw, height: h / k))
     }
 
     static func iconButton(_ image: UIImage, size: CGFloat = 32) -> UIButton {
@@ -154,7 +162,7 @@ final class PopoverController: UIViewController, UIPopoverPresentationController
         self.content = content
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .popover
-        preferredContentSize = size
+        preferredContentSize = CGSize(width: size.width * UI.scale, height: size.height * UI.scale)
         popoverPresentationController?.delegate = self
         popoverPresentationController?.backgroundColor = Theme.popover
     }
@@ -169,7 +177,12 @@ final class PopoverController: UIViewController, UIPopoverPresentationController
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        content.frame = view.bounds.inset(by: view.safeAreaInsets)
+        // Popovers sit outside ScaledContainer, so they scale their own content to match.
+        let r = view.bounds.inset(by: view.safeAreaInsets), s = UI.scale
+        content.transform = .identity
+        content.bounds = CGRect(x: 0, y: 0, width: r.width / s, height: r.height / s)
+        content.center = CGPoint(x: r.midX, y: r.midY)
+        content.transform = CGAffineTransform(scaleX: s, y: s)
     }
 
     func adaptivePresentationStyle(for controller: UIPresentationController) -> UIModalPresentationStyle { .none }
