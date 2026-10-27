@@ -1,0 +1,18 @@
+name: LiveLegacy
+options:
+  bundleIdPrefix: com.alexms
+  deploymentTarget:
+    iOS: "12.0"
+targets:
+  LiveLegacy:
+    type: application
+    platform: iOS
+    deploymentTarget: "12.0"
+    sources: [LiveLegacy]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexms.livelegacy
+        TARGETED_DEVICE_FAMILY: "2"
+        SWIFT_VERSION: "5.0"
+        INFOPLIST_FILE: LiveLegacy/Info.plist
+        CODE_SIGN_STYLE: Automatic
