@@ -2,7 +2,8 @@
 
 # LiveLegacy
 
-A viewer for Capture One's **Live for Studio** that runs on old iPads and iPhones. It needs iOS 12 or later.
+A viewer for Capture One's **Live for Studio** and **Capture Pilot** that runs on old iPads and iPhones. It needs
+iOS 12 or later.
 
 Capture One's own Live app needs iPadOS 16. That leaves out a lot of iPads that are still perfectly good for a
 client or art director to hold during a shoot, like the iPad mini 2, iPad Air 1 and iPad mini 3. LiveLegacy talks to
@@ -11,6 +12,9 @@ the same Live for Studio share from the desktop, so those iPads can browse, rate
 It also runs on iPhone and iPod touch (the official app is iPad only), including old ones stuck on iOS 12 like the
 iPhone 5s, iPhone 6 and iPod touch 6th gen. The phone version has its own layout: the folders slide in from the left,
 filter, sort and Follow sit in a bar along the bottom, and the stars run across the bottom of the viewer.
+
+It connects to Capture One's Capture Pilot server too, using the same screens. There it can also fire the tethered
+camera and change its settings.
 
 This is an unofficial project. It has nothing to do with Capture One and isn't supported by them.
 
@@ -26,7 +30,8 @@ This is an unofficial project. It has nothing to do with Capture One and isn't s
 
 ## What it does
 
-- Finds shared sessions on your network by itself, or you can type in the IP and port.
+- Finds Live for Studio and Capture Pilot servers on your network by itself and labels which is which, or you can
+  type in the IP and port.
 - Shows a sidebar of the shared folders and collections, with subfolders nested like they are on the desktop.
 - Shows a thumbnail grid, sorted by Last Captured either way round.
 - Filters by star rating and colour tag.
@@ -38,13 +43,17 @@ This is an unofficial project. It has nothing to do with Capture One and isn't s
   remotely.
 - Supports keyboard shortcuts if you've got a keyboard attached: arrow keys to move, `0`–`5` to rate, `⌥0`–`⌥7` to
   tag, `F` to follow and `Esc` to go back.
+- On Capture Pilot, adds a shutter button that fires the tethered camera, and a camera panel with a histogram of the
+  newest shot and the camera's settings (ISO, aperture, shutter, exposure, white balance, metering, drive and
+  format). Step each with − / + or tap it to pick from the list.
 - Has two settings: Prevent Sleep and Follow Border.
 
 It looks and works like the official app, so anyone who's used that won't need showing.
 
 ## What you need
 
-- **Capture One Studio** on a Mac, with the Live for Studio tool. I've tested it with 16.8.6.
+- **Capture One** on a Mac, with the Live for Studio tool (Capture One Studio) or the Capture Pilot tool. I've
+  tested it with 16.8.6.
 - An iPad, iPhone or iPod touch on **iOS 12 or newer** on the same network as the Mac. I've tested it on an iPad
   mini 2 running iOS 12.5.8, and the phone layout in the simulator. It needs a 64-bit device, which covers
   everything that can run iOS 12.
@@ -79,11 +88,16 @@ How long it keeps working depends on the Apple ID:
    Settings** in the Live for Studio tool. The port changes every time you start sharing, so check it again if you
    stop and start.
 
+For **Capture Pilot** instead, start the server in the **Capture Pilot** tool. Tick **Capture images** if you want
+to fire the camera from the app. It shows up in the list labelled Capture Pilot. Its port is also picked
+automatically and changes each time the server starts, so recheck it in the tool if you enter it by hand.
+
 When you click Stop Sharing on the Mac, the app tells you the project is no longer shared and goes back to the
 list.
 
 ## Things to know
 
+- **Live view:** Capture Pilot's camera control doesn't include live view, so there's no live preview in the app.
 - **Passwords:** a share with a password set probably won't connect. I haven't been able to test it yet. Leave the
   password blank for now.
 - **Network:** both devices need to be on the same network. Phone hotspots tend to be flaky, and so are VPNs.
@@ -137,9 +151,14 @@ with `platform=Capture One Mac` in its TXT record. The app then:
 4. Pulls thumbnails, full images and zoomed crops from `getImageForLive`.
 5. Writes ratings and tags back with `setPropertyForLive`.
 
+Capture Pilot's server works the same way, with the same calls minus the `ForLive` suffix (`connectToService` is a
+POST). It serves one folder, and adds a camera object with its settings, plus `capture`, `incrementProperty`,
+`decrementProperty` and `getHistogram`. Live and Capture Pilot advertise themselves identically, so the app asks each
+server which one it is. [`docs/capture-pilot-notes.md`](docs/capture-pilot-notes.md) has the details.
+
 All of it lives in [`LiveClient.swift`](LiveLegacy/LiveClient.swift) if you're curious.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Capture One and Live for Studio are trademarks of Capture One A/S. This project just
+MIT. See [LICENSE](LICENSE). Capture One, Live for Studio and Capture Pilot are trademarks of Capture One A/S. This project just
 talks to them over your network.
