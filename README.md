@@ -72,6 +72,7 @@ How long it keeps working depends on the Apple ID:
 1. In Capture One, open your session and go to the **Tether** tab. In the **Live for Studio** tool, pick what to
    share and click **Start Sharing**.
 2. Open LiveLegacy on the iPad or iPhone. The session shows up under **Shared** after a second or two. Tap it.
+   No Capture One handy? Tap **Demo Project** to try the app with built-in sample images.
 3. If it doesn't show up, Bonjour discovery is probably being blocked. Guest Wi-Fi and some office networks do this.
    Tap the screen icon at the top right and enter the IP address and port. You'll find both under **⋯ → Network
    Settings** in the Live for Studio tool. The port changes every time you start sharing, so check it again if you
@@ -104,6 +105,7 @@ check.
 ```bash
 ./build.sh unsigned   # build/LiveLegacy-unsigned.ipa, for sideloading
 ./build.sh sim        # build/sim/LiveLegacy.app, for a current iPad or iPhone simulator
+TEAM_ID=... ./build.sh appstore   # iOS 15+ App Store build via xcodebuild (needs a release Xcode)
 PROFILE=path/to/profile.mobileprovision ./build.sh   # signed with your own developer profile
 ```
 

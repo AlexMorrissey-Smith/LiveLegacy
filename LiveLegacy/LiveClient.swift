@@ -65,12 +65,17 @@ final class LiveClient {
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.timeoutIntervalForRequest = 20
         config.httpMaximumConnectionsPerHost = 6
-        session = URLSession(configuration: config)
 
         let pollConfig = URLSessionConfiguration.default
         pollConfig.requestCachePolicy = .reloadIgnoringLocalCacheData
         // The server answers an idle poll after 60 s.
         pollConfig.timeoutIntervalForRequest = 120
+        // The built-in demo share answers inside the app instead of over the network.
+        if host == DemoServer.host {
+            config.protocolClasses = [DemoServer.self]
+            pollConfig.protocolClasses = [DemoServer.self]
+        }
+        session = URLSession(configuration: config)
         pollSession = URLSession(configuration: pollConfig)
         imageCache.totalCostLimit = 150 * 1024 * 1024
     }

@@ -4,7 +4,11 @@
 #
 #   ./build.sh            device build (arm64, iOS 12.0), signed, plus build/LiveLegacy.ipa
 #   ./build.sh sim        simulator build (iOS 15 target, for testing on a current simulator)
-#   ./build.sh unsigned   device build with no signature, as build/LiveLegacy-unsigned.ipa for Sideloadly/AltStore
+#   ./build.sh unsigned   device build with no signature, as build/LiveLegacy-unsigned.ipa for Sideloadly
+#   ./build.sh appstore   App Store build (iOS 15 minimum, the lowest current Xcode allows) archived with xcodebuild
+#                         and exported to build/appstore/LiveLegacy.ipa. Needs a release (non-beta) Xcode, picked
+#                         with DEVELOPER_DIR, and an Xcode account on the paid team (TEAM_ID). UPLOAD=1 sends it to App Store
+#                         Connect instead, where the app record must already exist. BUILD_NUMBER sets CFBundleVersion.
 #
 # Env: SIGN_ID (codesigning identity), PROFILE (path to a .mobileprovision covering the bundle ID and the iPad).
 set -euo pipefail
@@ -12,6 +16,31 @@ cd "$(dirname "$0")"
 
 MODE=${1:-device}
 BUNDLE_ID=com.alexms.livelegacy
+BUILD_NUMBER=${BUILD_NUMBER:-1}
+
+if [ "$MODE" = appstore ]; then
+  OUT=build/appstore
+  rm -rf "$OUT"; mkdir -p "$OUT"
+  xcodegen generate --quiet
+  xcodebuild archive -project LiveLegacy.xcodeproj -scheme LiveLegacy -configuration Release \
+    -destination 'generic/platform=iOS' -archivePath "$OUT/LiveLegacy.xcarchive" -allowProvisioningUpdates \
+    IPHONEOS_DEPLOYMENT_TARGET=15.0 CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+    DEVELOPMENT_TEAM="${TEAM_ID:?Set TEAM_ID to your developer team ID}" -quiet
+  cat > "$OUT/ExportOptions.plist" <<OPTS
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>method</key><string>app-store-connect</string>
+  <key>destination</key><string>$([ "${UPLOAD:-0}" = 1 ] && echo upload || echo export)</string>
+  <key>signingStyle</key><string>automatic</string>
+</dict></plist>
+OPTS
+  # Export runs /usr/bin/rsync, which breaks if a newer Homebrew rsync is first on PATH.
+  PATH=/usr/bin:/bin:/usr/sbin:/sbin xcodebuild -exportArchive -archivePath "$OUT/LiveLegacy.xcarchive" -exportPath "$OUT" \
+    -exportOptionsPlist "$OUT/ExportOptions.plist" -allowProvisioningUpdates -quiet
+  echo "App Store build done in $OUT"
+  exit 0
+fi
 if [ "$MODE" = sim ]; then
   SDK=iphonesimulator; TARGET=arm64-apple-ios15.0-simulator; MIN=15.0; PLATFORM=iPhoneSimulator
 else
@@ -28,7 +57,7 @@ xcrun -sdk $SDK swiftc -target $TARGET -sdk "$SDK_PATH" -O -swift-version 5 \
 xcrun ibtool --compile "$APP/LaunchScreen.storyboardc" LiveLegacy/LaunchScreen.storyboard \
   --minimum-deployment-target $MIN --target-device iphone --target-device ipad
 
-sed -e 's/$(EXECUTABLE_NAME)/LiveLegacy/; s/$(PRODUCT_NAME)/LiveLegacy/' \
+sed -e 's/$(EXECUTABLE_NAME)/LiveLegacy/; s/$(PRODUCT_NAME)/LiveLegacy/' -e "s/\$(CURRENT_PROJECT_VERSION)/$BUILD_NUMBER/" \
     -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$BUNDLE_ID/" LiveLegacy/Info.plist > "$APP/Info.plist"
 P() { /usr/libexec/PlistBuddy -c "$1" "$APP/Info.plist"; }
 P "Add :MinimumOSVersion string $MIN"
@@ -43,6 +72,7 @@ xcrun actool LiveLegacy/Assets.xcassets --compile "$APP" --platform $SDK --minim
   --output-format human-readable-text > /dev/null
 /usr/libexec/PlistBuddy -c "Merge $OUT/icon.plist" "$APP/Info.plist"
 plutil -convert binary1 "$APP/Info.plist"
+cp LiveLegacy/PrivacyInfo.xcprivacy "$APP/"
 printf 'APPL????' > "$APP/PkgInfo"
 
 if [ "$MODE" = sim ]; then

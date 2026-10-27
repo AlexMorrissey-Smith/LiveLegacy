@@ -86,7 +86,10 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
 
     // MARK: Table
 
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { max(rows.count, 1) }
+    /// The last row is always the built-in demo project, so the app can be tried without Capture One.
+    private var demoRow: Int { max(rows.count, 1) }
+
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { demoRow + 1 }
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let v = UIView()
@@ -103,7 +106,9 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "p", for: indexPath) as! ProjectCell
-        if rows.isEmpty {
+        if indexPath.row == demoRow {
+            cell.configure(name: "Demo Project", detail: "Try it without Capture One", placeholder: false)
+        } else if rows.isEmpty {
             cell.configure(name: "Searching for shared projects…", detail: "", placeholder: true)
         } else {
             let r = rows[indexPath.row]
@@ -126,6 +131,9 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        if indexPath.row == demoRow {
+            return connect(host: DemoServer.host, port: 80, name: "Demo Project")
+        }
         guard indexPath.row < rows.count else { return }
         let r = rows[indexPath.row]
         connect(host: r.host, port: r.port, name: r.manualIndex == nil ? r.name : r.host)
