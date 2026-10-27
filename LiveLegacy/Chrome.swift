@@ -39,12 +39,7 @@ final class TopBar: UIView {
             v.center = CGPoint(x: x + s.width * k / 2, y: top + h / 2)
             v.transform = CGAffineTransform(scaleX: k, y: k)
         }
-        var x: CGFloat = 12 * k + safeAreaInsets.left
-        for v in leftViews {
-            let s = v.sizeThatFits(CGSize(width: 400, height: h / k))
-            place(v, x: x, size: s)
-            x += (s.width + 12) * k
-        }
+        // Right group first, then middle views, then whatever room is left goes to the left group and title.
         var r = bounds.width - 12 * k - safeAreaInsets.right
         for v in rightViews.reversed() {
             let s = v.sizeThatFits(CGSize(width: 400, height: h / k))
@@ -52,12 +47,52 @@ final class TopBar: UIView {
             place(v, x: r, size: s)
             r -= 16 * k
         }
-        for (v, fraction) in middleViews {
+        // Middle views sit at their fractions but are pushed left, rightmost first, so they never
+        // run into the right-hand group (which grows when Capture Pilot adds its camera buttons).
+        var limit = r
+        var middleStart = r + 16 * k
+        for (v, fraction) in middleViews.sorted(by: { $0.1 > $1.1 }) {
             let s = v.sizeThatFits(CGSize(width: 400, height: h / k))
-            place(v, x: bounds.width * fraction - s.width * k / 2, size: s)
+            let x = min(bounds.width * fraction - s.width * k / 2, limit - s.width * k)
+            place(v, x: x, size: s)
+            middleStart = x
+            limit = x - 8 * k
         }
-        let tw = min(titleLabel.intrinsicContentSize.width, bounds.width * 0.4 / k)
-        place(titleLabel, x: bounds.width * titleCenter - tw * k / 2, size: CGSize(width: tw, height: h / k))
+        // When crowded, back buttons drop their text and keep the chevron, so the title still fits.
+        let left = 12 * k + safeAreaInsets.left
+        func leftWidth() -> CGFloat {
+            leftViews.reduce(0) { $0 + ($1.sizeThatFits(CGSize(width: 400, height: h / k)).width + 12) * k }
+        }
+        leftViews.compactMap { $0 as? UIButton }.forEach { setCollapsed($0, false) }
+        let titleMin = min(titleLabel.intrinsicContentSize.width, 120) * k
+        if left + leftWidth() + titleMin > middleStart - 8 * k {
+            leftViews.compactMap { $0 as? UIButton }.forEach { setCollapsed($0, true) }
+        }
+        var x = left
+        for v in leftViews {
+            let s = v.sizeThatFits(CGSize(width: 400, height: h / k))
+            place(v, x: x, size: s)
+            x += (s.width + 12) * k
+        }
+        // Title centres on its fraction but stays between the left group and the middle views.
+        let lo = x, hi = middleStart - 8 * k
+        let tw = max(0, min(titleLabel.intrinsicContentSize.width * k, bounds.width * 0.4, hi - lo))
+        let tx = min(max(bounds.width * titleCenter - tw / 2, lo), hi - tw)
+        place(titleLabel, x: tx, size: CGSize(width: tw / k, height: h / k))
+    }
+
+    private var fullTitles: [ObjectIdentifier: String] = [:]
+
+    /// Hides or restores the text of a chevron-and-text button; plain text or icon buttons are left alone.
+    private func setCollapsed(_ b: UIButton, _ collapsed: Bool) {
+        guard b.image(for: .normal) != nil else { return }
+        let id = ObjectIdentifier(b)
+        if fullTitles[id] == nil {
+            guard let t = b.title(for: .normal), !t.isEmpty else { return }
+            fullTitles[id] = t
+        }
+        let want = collapsed ? nil : fullTitles[id]
+        if b.title(for: .normal) != want { b.setTitle(want, for: .normal) }
     }
 
     static func iconButton(_ image: UIImage, size: CGFloat = 32) -> UIButton {

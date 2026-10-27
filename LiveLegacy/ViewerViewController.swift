@@ -11,6 +11,7 @@ final class ViewerViewController: UIViewController, UIScrollViewDelegate {
     private let bar = TopBar()
     private let backButton = TopBar.textButton("Back", chevron: true)
     private let followButton = FollowButton()
+    private lazy var camera = CameraControls(client: client, presenter: self)
     private let scrollView = UIScrollView()
     private let imageView = UIImageView()
     private let detailView = UIImageView()
@@ -75,7 +76,11 @@ final class ViewerViewController: UIViewController, UIScrollViewDelegate {
         backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
         followButton.addTarget(self, action: #selector(followTapped), for: .touchUpInside)
         bar.leftViews = [backButton]
-        bar.rightViews = [followButton]
+        bar.rightViews = camera.views + [followButton]
+        camera.onChange = { [weak self] in
+            guard let self = self else { return }
+            self.bar.rightViews = self.camera.views + [self.followButton]
+        }
         view.addSubview(bar)
 
         NotificationCenter.default.addObserver(self, selector: #selector(refreshControls),

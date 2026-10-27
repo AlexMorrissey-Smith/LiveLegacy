@@ -146,6 +146,27 @@ enum Icon {
         }
     }
 
+    /// Shutter release: a ring around a filled dot.
+    static func shutter() -> UIImage {
+        draw("shutter", CGSize(width: 26, height: 26)) { _ in
+            stroke(UIBezierPath(ovalIn: CGRect(x: 2, y: 2, width: 22, height: 22)), 1.6)
+            UIColor.black.setFill()
+            UIBezierPath(ovalIn: CGRect(x: 7, y: 7, width: 12, height: 12)).fill()
+        }
+    }
+
+    static func camera() -> UIImage {
+        draw("camera", CGSize(width: 28, height: 24)) { _ in
+            let body = UIBezierPath(roundedRect: CGRect(x: 2, y: 6, width: 24, height: 15), cornerRadius: 3)
+            stroke(body, 1.5)
+            let top = UIBezierPath()
+            top.move(to: CGPoint(x: 9, y: 6)); top.addLine(to: CGPoint(x: 11, y: 3))
+            top.addLine(to: CGPoint(x: 17, y: 3)); top.addLine(to: CGPoint(x: 19, y: 6))
+            stroke(top, 1.5)
+            stroke(UIBezierPath(ovalIn: CGRect(x: 9.5, y: 9, width: 9, height: 9)), 1.5)
+        }
+    }
+
     static func square(slashed: Bool = false, size: CGFloat = 24) -> UIImage {
         draw("sq\(slashed)\(size)", CGSize(width: size, height: size)) { _ in
             let r = CGRect(x: 2, y: 2, width: size - 4, height: size - 4)

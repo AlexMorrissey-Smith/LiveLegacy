@@ -15,6 +15,7 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
     private let filterButton = TopBar.iconButton(Icon.filter(), size: 32)
     private let sortButton = TopBar.iconButton(Icon.sort(ascending: false), size: 32)
     private let followButton = FollowButton()
+    private lazy var camera = CameraControls(client: client, presenter: self)
     private var collectionView: UICollectionView!
     private var sidebarVisible = !isPhone
     /// iPhone only: toolbar holding the controls that live in the top bar on iPad, and a dimmer behind the drawer.
@@ -82,7 +83,7 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
             backButton.setTitle("Projects", for: .normal)
             bar.leftViews = [backButton]
             view.addSubview(bottomBar)
-            bottomBar.items = [sidebarButton, filterButton, sortButton, followButton]
+            layoutBarButtons()
             dimView.backgroundColor = UIColor(white: 0, alpha: 0.5)
             dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleCollections)))
             view.addSubview(dimView)
@@ -91,8 +92,9 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
             bar.leftViews = [backButton]
             bar.titleCenter = 0.42
             bar.middleViews = [(filterButton, 0.6), (sortButton, 0.83)]
-            bar.rightViews = [followButton]
+            layoutBarButtons()
         }
+        camera.onChange = { [weak self] in self?.layoutBarButtons() }
 
         let nc = NotificationCenter.default
         nc.addObserver(self, selector: #selector(variantsChanged), name: .liveVariantsChanged, object: client)
@@ -103,6 +105,15 @@ final class GridViewController: UIViewController, UICollectionViewDataSource, UI
         // Testing hook, like -autoConnect: launch with "-openFirst YES" to open the first image.
         if UserDefaults.standard.bool(forKey: "openFirst"), let first = shown.first {
             DispatchQueue.main.async { self.openViewer(id: first.id) }
+        }
+    }
+
+    /// Capture Pilot's camera buttons sit just before Follow, and only while a camera can be used.
+    private func layoutBarButtons() {
+        if isPhone {
+            bottomBar.items = [sidebarButton, filterButton, sortButton] + camera.views + [followButton]
+        } else {
+            bar.rightViews = camera.views + [followButton]
         }
     }
 

@@ -3,13 +3,18 @@ import UIKit
 /// "Shared Projects": Bonjour-discovered Capture One sessions plus saved manual entries.
 final class ServerListViewController: UIViewController, UITableViewDataSource, UITableViewDelegate,
     NetServiceBrowserDelegate, NetServiceDelegate {
-    private struct Manual: Codable { let host: String; let port: Int }
-    private struct Row { let name: String; let detail: String; let host: String; let port: Int; let manualIndex: Int? }
+    private struct Manual: Codable { let host: String; let port: Int; var kind: LiveClient.Kind? }
+    private struct Row {
+        let name: String; let detail: String; let host: String; let port: Int
+        let kind: LiveClient.Kind; let manualIndex: Int?
+    }
 
     private let bar = TopBar()
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let browser = NetServiceBrowser()
     private var services: [NetService] = []
+    /// Live for Studio and Capture Pilot advertise identically, so each resolved server is asked which it is.
+    private var kinds: [String: LiveClient.Kind] = [:]
     private var manual: [Manual] = []
     private var connecting = false
     private let networkButton = TopBar.iconButton(Icon.network(), size: 24)
@@ -43,7 +48,7 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
         if let target = UserDefaults.standard.string(forKey: "autoConnect"),
            let colon = target.lastIndex(of: ":"), let port = Int(target[target.index(after: colon)...]) {
             let host = String(target[..<colon])
-            DispatchQueue.main.async { self.connect(host: host, port: port, name: host) }
+            DispatchQueue.main.async { self.connectDetecting(host: host, port: port) }
         }
     }
 
@@ -68,7 +73,17 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
         tableView.reloadData()
     }
 
-    func netServiceDidResolveAddress(_ sender: NetService) { tableView.reloadData() }
+    func netServiceDidResolveAddress(_ sender: NetService) {
+        tableView.reloadData()
+        guard let host = sender.hostName, sender.port > 0 else { return }
+        let key = "\(host):\(sender.port)"
+        guard kinds[key] == nil else { return }
+        LiveClient.detect(host: host, port: sender.port) { [weak self] kind in
+            guard let self = self, let kind = kind else { return }
+            self.kinds[key] = kind
+            self.tableView.reloadData()
+        }
+    }
 
     private var rows: [Row] {
         let found: [Row] = services.compactMap { s in
@@ -76,10 +91,12 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
                   NetService.dictionary(fromTXTRecord: txt)["platform"]
                     .flatMap({ String(data: $0, encoding: .utf8) })?.hasPrefix("Capture One") == true,
                   let host = s.hostName, s.port > 0 else { return nil }
-            return Row(name: s.name, detail: host, host: host, port: s.port, manualIndex: nil)
+            let kind = kinds["\(host):\(s.port)"]
+            return Row(name: s.name, detail: kind?.label ?? host, host: host, port: s.port, kind: kind ?? .live, manualIndex: nil)
         }
         let saved = manual.enumerated().map { i, m in
-            Row(name: "\(m.host):\(m.port)", detail: "Manual", host: m.host, port: m.port, manualIndex: i)
+            Row(name: "\(m.host):\(m.port)", detail: (m.kind?.label ?? "Manual") + " (manual)",
+                host: m.host, port: m.port, kind: m.kind ?? .live, manualIndex: i)
         }
         return found + saved
     }
@@ -136,15 +153,39 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
         }
         guard indexPath.row < rows.count else { return }
         let r = rows[indexPath.row]
-        connect(host: r.host, port: r.port, name: r.manualIndex == nil ? r.name : r.host)
+        if r.manualIndex != nil { return connectDetecting(host: r.host, port: r.port) }
+        // Not identified yet (tapped before the probe answered): find out on the way in.
+        guard let kind = kinds["\(r.host):\(r.port)"] else { return connectDetecting(host: r.host, port: r.port, name: r.name) }
+        connect(host: r.host, port: r.port, name: r.name, kind: kind)
     }
 
     // MARK: Actions
 
-    private func connect(host: String, port: Int, name: String) {
+    /// Manual entries don't say which server they are, so ask the server first.
+    private func connectDetecting(host: String, port: Int, name: String? = nil) {
         guard !connecting else { return }
         connecting = true
-        let client = LiveClient(host: host, port: port, name: name)
+        LiveClient.detect(host: host, port: port) { [weak self] kind in
+            guard let self = self else { return }
+            self.connecting = false
+            guard let kind = kind else {
+                let a = darkAlert("Could not connect", "Nothing at \(host):\(port) answered as Live for Studio or Capture Pilot.")
+                a.addAction(UIAlertAction(title: "OK", style: .default))
+                return self.present(a, animated: true)
+            }
+            if let i = self.manual.firstIndex(where: { $0.host == host && $0.port == port }), self.manual[i].kind != kind {
+                self.manual[i].kind = kind
+                self.saveManual()
+                self.tableView.reloadData()
+            }
+            self.connect(host: host, port: port, name: name ?? host, kind: kind)
+        }
+    }
+
+    private func connect(host: String, port: Int, name: String, kind: LiveClient.Kind = .live) {
+        guard !connecting else { return }
+        connecting = true
+        let client = LiveClient(host: host, port: port, name: name, kind: kind)
         client.connect { [weak self] error in
             guard let self = self else { return }
             self.connecting = false
@@ -160,7 +201,7 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
     }
 
     @objc private func addManual() {
-        let a = darkAlert("Connect to Server", "Enter the IP address and port shown in Live for Studio > Network Settings.")
+        let a = darkAlert("Connect to Server", "Enter the IP address and port shown in Live for Studio > Network Settings, or in the Capture Pilot tool.")
         a.addTextField { $0.placeholder = "IP address"; $0.keyboardType = .numbersAndPunctuation }
         a.addTextField { $0.placeholder = "Port"; $0.keyboardType = .numberPad }
         a.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -169,11 +210,11 @@ final class ServerListViewController: UIViewController, UITableViewDataSource, U
                   let host = a.textFields?[0].text?.trimmingCharacters(in: .whitespaces), !host.isEmpty,
                   let port = Int(a.textFields?[1].text ?? ""), port > 0, port < 65536 else { return }
             if !self.manual.contains(where: { $0.host == host && $0.port == port }) {
-                self.manual.append(Manual(host: host, port: port))
+                self.manual.append(Manual(host: host, port: port, kind: nil))
                 self.saveManual()
                 self.tableView.reloadData()
             }
-            self.connect(host: host, port: port, name: host)
+            self.connectDetecting(host: host, port: port)
         })
         present(a, animated: true)
     }
