@@ -15,13 +15,13 @@ filter, sort and Follow sit in a bar along the bottom, and the stars run across 
 This is an unofficial project. It has nothing to do with Capture One and isn't supported by them.
 
 <p>
-  <img src="docs/grid.png" width="48%" alt="Grid of shared images with the collection sidebar">
-  <img src="docs/viewer.png" width="48%" alt="Single image viewer with star rating and colour tag">
+  <img src="docs/ipad-grid.png" width="48%" alt="Grid of shared images with the collection sidebar">
+  <img src="docs/ipad-viewer.png" width="48%" alt="Single image viewer with star rating and colour tag">
 </p>
 <p>
   <img src="docs/iphone-grid.png" width="24%" alt="iPhone grid with filter, sort and Follow along the bottom">
-  <img src="docs/iphone.png" width="24%" alt="iPhone viewer with stars along the bottom and the colour tag picker">
-  <img src="docs/filter.png" width="24%" alt="iPhone filter popover with rating and colour tag">
+  <img src="docs/iphone-viewer.png" width="24%" alt="iPhone viewer with stars along the bottom and the colour tag picker">
+  <img src="docs/iphone-filter.png" width="24%" alt="iPhone filter popover with rating and colour tag">
 </p>
 
 ## What it does
