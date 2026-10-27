@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="96" alt="LiveLegacy icon">
+
 # LiveLegacy
 
 An iPad viewer for Capture One's **Live for Studio** that runs on old iPads. It needs iOS 12 or later.

@@ -36,6 +36,12 @@ P "Add :UIDeviceFamily array"; P "Add :UIDeviceFamily:0 integer 2"
 P "Add :CFBundleSupportedPlatforms array"; P "Add :CFBundleSupportedPlatforms:0 string $PLATFORM"
 P "Add :DTPlatformName string $SDK"
 P "Add :UIRequiredDeviceCapabilities array"; P "Add :UIRequiredDeviceCapabilities:0 string arm64"
+# App icon: actool still accepts an iOS 12 target. It writes Assets.car, a loose 76pt fallback PNG and the
+# CFBundleIcons keys, which are merged into Info.plist below.
+xcrun actool LiveLegacy/Assets.xcassets --compile "$APP" --platform $SDK --minimum-deployment-target $MIN \
+  --target-device ipad --app-icon AppIcon --output-partial-info-plist "$OUT/icon.plist" \
+  --output-format human-readable-text > /dev/null
+/usr/libexec/PlistBuddy -c "Merge $OUT/icon.plist" "$APP/Info.plist"
 plutil -convert binary1 "$APP/Info.plist"
 printf 'APPL????' > "$APP/PkgInfo"
 
