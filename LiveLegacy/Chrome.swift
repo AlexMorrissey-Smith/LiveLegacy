@@ -108,7 +108,7 @@ final class FollowButton: SizedButton {
             setTitleColor(following ? Theme.accent : .white, for: .normal)
         }
         // Measure the string itself: on iOS 12 the title label still holds the old title at this point,
-        // so asking the button would size it for "Follow" and truncate "Stop".
+        // so asking the button would size it for the previous title.
         let font = titleLabel?.font ?? .boldSystemFont(ofSize: 15)
         let w = ceil((title as NSString).size(withAttributes: [.font: font]).width)
         fixedSize = CGSize(width: w + contentEdgeInsets.left + contentEdgeInsets.right, height: 30)
